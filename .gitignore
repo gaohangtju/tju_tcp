@@ -1,0 +1,15 @@
+# 构建产物
+build/
+*.o
+/client
+/server
+
+# 打包/评测产物
+handin.zip
+
+# 日志与抓包
+*.log
+*.pcap
+
+# Windows 本地语法检查用的桩头文件（非课程提交内容）
+lintsys/
