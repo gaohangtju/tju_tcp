@@ -10,13 +10,27 @@
 tju_tcp/
 ├── Makefile          # 构建：先编 kernel/tju_packet/tju_tcp，再链接 server/client
 ├── inc/              # 课程给定头文件（global.h / kernel.h / tju_packet.h / tju_tcp.h）
-└── src/
-    ├── tju_packet.c  # 报文封装与校验和（课程框架）
-    ├── kernel.c      # 模拟网络层：收发 UDP、按四元组分发（课程框架）
-    ├── server.c      # 服务端应用示例
-    ├── client.c      # 客户端应用示例
-    └── tju_tcp.c     # 全部协议实现所在（连接管理 + 可靠传输 + 流量控制 + 拥塞控制）
+├── src/
+│   ├── tju_packet.c  # 报文封装与校验和（课程框架）
+│   ├── kernel.c      # 模拟网络层：收发 UDP、按四元组分发（课程框架）
+│   ├── server.c      # 服务端应用示例
+│   ├── client.c      # 客户端应用示例
+│   └── tju_tcp.c     # 全部协议实现所在（连接管理 + 可靠传输 + 流量控制 + 拥塞控制）
+├── test/
+│   ├── bench_client.c  # 性能实验用发送端（自建基准）
+│   └── bench_server.c  # 性能实验用接收端（收满目标字节后打印耗时）
+└── exp/                # 性能实验与绘图（第三阶段）
+    ├── prep.sh         # 容器内编译工程与基准程序
+    ├── run_matrix.sh   # 丢包率/时延扫描器（含 netem 整形与生效性校验）
+    ├── run_B.sh        # 切到限窗配置取样后自动切回
+    ├── run_all.sh      # 一次性跑完 A+B 四组实验
+    ├── plot.py         # 由原始 CSV / trace 生成 fig1…fig4
+    ├── data/           # 原始实验数据（CSV）与拥塞窗口 trace
+    ├── figures/        # 报告用图表
+    └── trace/          # 插桩版源码与 trace 采集脚本（不参与提交编译）
 ```
+
+详细的复现步骤见 [`REPRODUCE.md`](REPRODUCE.md)。
 
 `src/tju_tcp.c` 中通过 `tju_tcp_t.ext` 指针挂载内部扩展控制块 `struct tju_tcp_ext`，
 承载全部协议状态（序号/窗口/定时器/拥塞控制等），不改动 `kernel.c` / `tju_packet.c`。
@@ -62,8 +76,11 @@ cd tju_tcp/test
 - `0`（默认）：发送窗口 = `rwnd`，仅做流量控制。
 
 说明：课程可靠传输验收链路的丢包率较高（<6%），实测启用 cwnd 限窗会使吞吐显著下降
-（约 64MB/90s → 14MB/90s），故默认取 `0` 以保证可靠传输吞吐；Reno/NewReno 的实现
-（`cwnd` / `ssthresh` / 部分 ACK 恢复等）完整保留，置 `1` 即可启用并在 trace 中观察。
+（在线评分 64.32 → 14.56 → 关闭限窗后 100.00）。定位到的原因是：RTO 后 `cwnd` 降到 1 个
+SMSS，而 `FlightSize` 仍为 65535 B，`win = min(rwnd, cwnd)` 使发送方除超时重传外发不出新
+数据，进而永远产生不了"新鲜段确认"，`rto_ms` 便永久停留在指数退避后的 4000 ms（详见
+`exp/data/cwnd_loss2.log` 与实验报告 §8.3）。故默认取 `0` 以保证可靠传输吞吐；Reno/NewReno
+的实现（`cwnd` / `ssthresh` / 部分 ACK 恢复等）完整保留，置 `1` 即可启用并在 trace 中观察。
 
 ## 打包提交
 

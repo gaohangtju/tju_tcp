@@ -1,0 +1,4 @@
+# 源码与脚本一律以 LF 存储：脚本最终在 Linux 容器内执行，CRLF 会导致
+# bash 报 "bad interpreter"（$'\r' 无法识别）。
+* text=auto eol=lf
+*.png binary
