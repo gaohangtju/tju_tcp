@@ -1,0 +1,14 @@
+### 配置B（ENABLE_CWND_LIMIT=1）, 1MB, 时延 6ms ###
+44:#define ENABLE_CWND_LIMIT 1
+mesg: ttyname failed: Inappropriate ioctl for device
+BUILD-OK
+44:#define ENABLE_CWND_LIMIT 1
+cli-loss=1% srv-loss=0% => []
+cli-loss=0% srv-loss=1% => [[BENCH-SRV] recv=1048576 bytes in 0.237 s => 4.431 MB/s]
+cli-loss=1% srv-loss=1% => []
+cli-loss=0% srv-loss=0% => [[BENCH-SRV] recv=1048576 bytes in 0.222 s => 4.723 MB/s]
+=== diff-test done ===
+44:#define ENABLE_CWND_LIMIT 0
+mesg: ttyname failed: Inappropriate ioctl for device
+BUILD-OK
+44:#define ENABLE_CWND_LIMIT 0

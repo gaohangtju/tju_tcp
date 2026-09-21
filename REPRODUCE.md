@@ -31,6 +31,8 @@
 | `exp/run_B.sh` | 切到 `ENABLE_CWND_LIMIT=1` → 编译 → 跑配置 B（`exp1_B.csv` 取 0% 丢包点 3 次；`exp2_B.csv` 只写表头）→ 切回 0 → 重编译 |
 | `exp/run_all.sh` | 一次性跑完 A+B 四组实验（完整复现用） |
 | `exp/run_B.log` | 配置 B 的原始运行日志（含 1% 丢包点停滞的 `WARN` 与 `recv=0` 记录，是"数据丢包后停滞"的原始证据） |
+| `exp/diff_test.sh` | 差分实验：四组组合（两端时延均 6 ms，仅改变 1% 丢包施加在哪一侧），输出服务端结果行 |
+| `exp/data/diff_test.log` | 差分实验的原始输出（报告 §8.3 表） |
 | `exp/trace/tju_tcp_trace.c` | 由 `src/tju_tcp.c` 机械派生的**插桩版**（仅打印 `[CWND]` 事件，不参与提交编译） |
 | `exp/trace/run_trace.sh` | 构建插桩客户端并采集 trace |
 | `exp/plot.py` | 读 CSV/日志生成 `exp/figures/fig1…fig4` |
@@ -79,7 +81,23 @@ bash exp/run_B.sh 4
 3. 每轮前后都要清理残留进程（`pkill -9 -f bench_`），残留的服务端会占用端口导致假失败；`run_matrix.sh` 已内置带校验的清理循环。
 4. 配置 B 在**数据丢包**链路上会自我锁死（1% 丢包下 4 MB/2 MB/1 MB 均在客户端 40 s 关闭上限内无法完成）：`run_B.sh` 因此对 `exp1_B.csv` 只取 0% 丢包点（3 次），对 `exp2_B.csv` 只写表头标记缺失。原始尝试记录见 `exp/run_B.log`（同一取样点连续两次 `客户端已退出但服务端无结果` 重试后 `recv=0`）。这是**实测结论**，不是脚本故障，详见报告 §8.3。
 
-## 6. 拥塞窗口 trace（图 3 / 图 4）
+## 6. 差分实验（报告 §8.3 表）
+
+```bash
+bash exp/diff_test.sh 1 > exp/data/diff_test.log 2>&1
+```
+
+四组组合：**只丢数据**（client eth0 出方向 1%）、**只丢 ACK**（server eth0 出方向 1%）、
+两端都丢、都不丢。**四组的两端都施加 `netem delay 6ms` 并校验生效**，唯一变量是丢包方向。
+脚本会强制 `ENABLE_CWND_LIMIT=1`（配置 B）编译运行，并以 `trap EXIT` 保证**无论成败**
+都恢复为 `0` 并重编译、清除两端整形与残留进程；与 `run_matrix.sh` 共用 `/tmp/tju_exp.lock`，
+避免与性能扫描互相切换宏造成数据污染。
+
+**实测结论**：只丢数据 → 未完成（客户端 40 s 关闭上限内无结果）；只丢 ACK → 正常完成
+（4.431 MB/s，与无丢包基线 4.723 MB/s 同量级）；两端都丢 → 未完成。故缺陷位于
+**数据丢失后的恢复推进路径**，与 ACK 丢失无关。
+
+## 7. 拥塞窗口 trace（图 3 / 图 4）
 
 ```bash
 bash exp/trace/run_trace.sh 2 /tmp/cwnd_loss2.log   # 2% 丢包 → 图 3
@@ -90,7 +108,7 @@ cp /tmp/cwnd_loss2.log /tmp/cwnd_loss0.log exp/data/
 
 > 插桩版由 `src/tju_tcp.c` 派生，强制 `ENABLE_CWND_LIMIT=1` 以便观察窗口对发送的实际约束；**它不属于提交代码**，仅在实验中使用。
 
-## 7. 出图
+## 8. 出图
 
 ```bash
 python exp/plot.py      # 生成 exp/figures/fig1_loss.png … fig4_cwnd_loss0.png
@@ -98,11 +116,11 @@ python exp/plot.py      # 生成 exp/figures/fig1_loss.png … fig4_cwnd_loss0.p
 
 Pillow 缺失时：`pip install Pillow`。图内中文使用系统字体（微软雅黑 / 黑体 / 宋体），Linux 下如缺字体会回退到默认字体。
 
-## 8. 报告 Word 文档
+## 9. 报告 Word 文档
 
 报告 Markdown 源在 `report/stage3/实验报告-第三阶段.md`；由 `report/scripts` 中的生成脚本渲染为 `3024244208_高航_第3周课程报告.docx`（保留课程模板封面、阶段索引表与样式，正文按标题/表格/代码块/图片逐块渲染）。
 
-## 9. 排障备查
+## 10. 排障备查
 
 - 容器网络故障（`NoValidConnectionsError ... 172.17.0.3:22`）：多为 `netproj` 网桥 DOWN 或 server 容器 sshd 未启动。重建网络并固定 IP，再 `docker exec tju_server bash -lc "service ssh start"`。
 - `paramiko` 连不上服务端时，先用 `docker exec tju_client ping -c3 172.17.0.3` 判断连通性（server 镜像**无 ping**，对它用 `ss -lntp | grep :22`）。
