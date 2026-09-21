@@ -118,7 +118,16 @@ Pillow 缺失时：`pip install Pillow`。图内中文使用系统字体（微�
 
 ## 9. 报告 Word 文档
 
-报告 Markdown 源在 `report/stage3/实验报告-第三阶段.md`；由 `report/scripts` 中的生成脚本渲染为 `3024244208_高航_第3周课程报告.docx`（保留课程模板封面、阶段索引表与样式，正文按标题/表格/代码块/图片逐块渲染）。
+报告 Markdown 源在 `report/stage3/实验报告-第三阶段.md`；由 `scripts/make_report_docx.py s3` 渲染为 `3024244208_高航_第3周课程报告.docx`（保留课程模板封面、阶段索引表与样式，正文按标题/表格/代码块/图片逐块渲染）。
+
+**答辩幻灯片**（与代码无关，随报告一起提交）：
+
+```bash
+python scripts/make_defense_pptx.py     # 读《答辩讲稿与提纲.md》→ 答辩幻灯片.pptx（10 页，内嵌图 1–4）
+python scripts/retime_defense.py        # 重写口播并按其字数重算时间轴（保证总时长 ≤ 5:00）
+```
+
+幻灯片的**页面要点**取自讲稿的同名条目、**备注区**为该页口播，改讲稿后重跑脚本即自动同步。
 
 ## 10. 排障备查
 
