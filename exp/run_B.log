@@ -1,0 +1,11 @@
+===== 配置 B（Reno 限窗）=====
+44:#define ENABLE_CWND_LIMIT 1
+mesg: ttyname failed: Inappropriate ioctl for device
+BUILD-OK
+44:#define ENABLE_CWND_LIMIT 1
+  [B loss=0% delay=6ms rep=1] recv=4194304 sec=0.871 => 4.8155 MB/s
+  [B loss=0% delay=6ms rep=2] recv=4194304 sec=0.867 => 4.8377 MB/s
+  !! WARN: 客户端已退出但服务端无结果 (loss=1 delay=6 rep=1)，重试
+  !! WARN: 客户端已退出但服务端无结果 (loss=1 delay=6 rep=1)，重试
+  [B loss=1% delay=6ms rep=1] recv=0 sec=0 => 0 MB/s
+  !! WARN: 客户端已退出但服务端无结果 (loss=1 delay=6 rep=2)，重试

@@ -28,8 +28,9 @@
 | `test/bench_server.c` | 性能实验用接收端，收满目标字节后打印 `recv=<B> bytes in <s> s` |
 | `exp/prep.sh` | 容器内 `make` + 编译 `bench_{server,client}`，并回显 `ENABLE_CWND_LIMIT` 当前值 |
 | `exp/run_matrix.sh` | 扫描器：`run_matrix.sh <配置标签> <输出CSV> <exp1\|exp2> [MB] [点列表] [重复次数]` |
-| `exp/run_B.sh` | 切到 `ENABLE_CWND_LIMIT=1` → 编译 → 跑配置 B 取样 → 切回 0 → 重编译 |
+| `exp/run_B.sh` | 切到 `ENABLE_CWND_LIMIT=1` → 编译 → 跑配置 B（`exp1_B.csv` 取 0% 丢包点 3 次；`exp2_B.csv` 只写表头）→ 切回 0 → 重编译 |
 | `exp/run_all.sh` | 一次性跑完 A+B 四组实验（完整复现用） |
+| `exp/run_B.log` | 配置 B 的原始运行日志（含 1% 丢包点停滞的 `WARN` 与 `recv=0` 记录，是"数据丢包后停滞"的原始证据） |
 | `exp/trace/tju_tcp_trace.c` | 由 `src/tju_tcp.c` 机械派生的**插桩版**（仅打印 `[CWND]` 事件，不参与提交编译） |
 | `exp/trace/run_trace.sh` | 构建插桩客户端并采集 trace |
 | `exp/plot.py` | 读 CSV/日志生成 `exp/figures/fig1…fig4` |
@@ -76,7 +77,7 @@ bash exp/run_B.sh 4
 1. `tc ... netem ... loss 0%` 是 **iproute2 非法写法**（`Illegal "loss percent"`），整条命令会失败。脚本在丢包为 0 时只加时延，并在整形后用 `tc qdisc show dev eth0 | grep netem` **校验整形确实生效**，否则打印 `WARN`。
 2. **不要把关键命令的 stderr 重定向到 `/dev/null`**——错误会被静默吞掉，实验会"看起来成功但实际没整形"。若结果超出理论边界（如吞吐 > `rwnd/RTT`），首先怀疑整形未生效。
 3. 每轮前后都要清理残留进程（`pkill -9 -f bench_`），残留的服务端会占用端口导致假失败；`run_matrix.sh` 已内置带校验的清理循环。
-4. 配置 B 在**数据丢包**链路上会停滞（1% 丢包下 1 MB 也在客户端 40 s 关闭上限内无法完成），因此 `exp2_B.csv` 只有表头、`exp1_B.csv` 只有 0% 丢包点。这是**实测结论**，不是脚本故障，详见报告 §8.3。
+4. 配置 B 在**数据丢包**链路上会自我锁死（1% 丢包下 4 MB/2 MB/1 MB 均在客户端 40 s 关闭上限内无法完成）：`run_B.sh` 因此对 `exp1_B.csv` 只取 0% 丢包点（3 次），对 `exp2_B.csv` 只写表头标记缺失。原始尝试记录见 `exp/run_B.log`（同一取样点连续两次 `客户端已退出但服务端无结果` 重试后 `recv=0`）。这是**实测结论**，不是脚本故障，详见报告 §8.3。
 
 ## 6. 拥塞窗口 trace（图 3 / 图 4）
 

@@ -12,6 +12,8 @@ handin.zip
 *.pcap
 # 例外：拥塞窗口 trace 是报告图表（图3/图4）的原始证据，须纳入版本管理
 !exp/data/cwnd_*.log
+# 例外：配置 B 的原始运行日志是"数据丢包后停滞"的原始证据
+!exp/run_*.log
 
 # Windows 本地语法检查用的桩头文件（非课程提交内容）
 lintsys/
